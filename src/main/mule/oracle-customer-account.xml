@@ -19,7 +19,7 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			<batch:process-records>
 				<batch:step name="Batch_Step" doc:id="f8b4e08a-2579-4287-93a7-b4794351d252">
 					<db:select config-ref="Database_Config" doc:name="Check existence in Database" doc:id="2a7fe855-e51d-4c85-856f-12890661519d" target="recordExists" targetValue="#[payload[0]]">
-						<db:sql>select TargetKeyNum,TargetKeyName,TargetKeyID from SYSTEM_KEY_MAP WHERE TargetKeyID =:TargetID
+						<db:sql>select TargetKeyName, from SYSTEM_KEY_MAP WHERE TargetKeyID =:TargetID
 </db:sql>
 						<db:input-parameters><![CDATA[#[{'TargetID': payload.PARTY_ID}]]]></db:input-parameters>
 					</db:select>

@@ -12,9 +12,9 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd">
 	<flow name="oracle-customer-siteFlow" doc:id="7c9c9c02-c49b-454a-a923-5bafa67432cd" >
 		<set-variable value='#["Custom/Integration/Customers/CustomerAccountSites.xdo"]' doc:name="Set Variable" doc:id="d10d345c-8dc2-4fcd-bf07-3b09c0087fc3" variableName="reportAbsolutePath"/>
-		<flow-ref doc:name="Flow Reference" doc:id="d79dd7d2-dfd5-4690-9386-d2ec66e68ec4" name="SOAPWEBSERVICEREQUESTcustomerSite"/>
-		<flow-ref doc:name="Flow Reference" doc:id="3817195d-2b4f-4304-8f0e-97b7944efa81" name="customerSiteBIreport"/>
-		<flow-ref doc:name="Flow Reference" doc:id="9c504d0b-a53c-4ac8-a020-71260a2cb6e0" name="convertBase64toXMLobjectCustomerSite"/>
+		<flow-ref doc:name="Flow Reference" doc:id="d79dd7d2-dfd5-4690-9386-d2ec66e68ec4" name="SOAPWEBSERVICEREQUEST"/>
+		<flow-ref doc:name="Flow Reference" doc:id="3817195d-2b4f-4304-8f0e-97b7944efa81" name="customerAccountBIreport"/>
+		<flow-ref doc:name="Flow Reference" doc:id="9c504d0b-a53c-4ac8-a020-71260a2cb6e0" name="convertBase64toXMLobject"/>
 		<ee:transform doc:name="Transform Message" doc:id="cb9bd447-21bb-4b08-abe2-9e73e2bedf3f" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
