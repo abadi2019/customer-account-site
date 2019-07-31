@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd">
+	<flow name="oracle-customer-siteFlow" doc:id="7c9c9c02-c49b-454a-a923-5bafa67432cd" >
+		<set-variable value='#["Custom/Integration/Customers/CustomerAccountSites.xdo"]' doc:name="Set Variable" doc:id="d10d345c-8dc2-4fcd-bf07-3b09c0087fc3" variableName="reportAbsolutePath"/>
+		<flow-ref doc:name="Flow Reference" doc:id="d79dd7d2-dfd5-4690-9386-d2ec66e68ec4" name="SOAPWEBSERVICEREQUESTcustomerSite"/>
+		<flow-ref doc:name="Flow Reference" doc:id="3817195d-2b4f-4304-8f0e-97b7944efa81" name="customerSiteBIreport"/>
+		<flow-ref doc:name="Flow Reference" doc:id="9c504d0b-a53c-4ac8-a020-71260a2cb6e0" name="convertBase64toXMLobjectCustomerSite"/>
+		<ee:transform doc:name="Transform Message" doc:id="cb9bd447-21bb-4b08-abe2-9e73e2bedf3f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<batch:job jobName="oracle-customer-siteBatch_Job" doc:id="59f13d73-42a5-41c4-a22b-7f648fe7e78e" blockSize="1000">
+			<batch:process-records>
+				<batch:step name="Batch_Step" doc:id="5a22c118-5a69-435c-b383-7265f28c60e2">
+					<db:select config-ref="Database_Config" doc:name="Check existence in Database" doc:id="40549f23-9a42-4265-8081-0641355a2dd8" target="recordExists" targetValue="#[payload[0]]">
+						<db:sql>select EntityID,EntityName,Env,SourceSystemID,SourceSystem,TargetSystemID,TargetSystem,TargetKeyID,
+	TargetKeyNum,TargetKeyName,TargetParentEntityKeyID,TargetParentEntityKeyNum, MapStatus,Verified,TargetActive from SYSTEM_KEY_MAP WHERE TargetKeyID =:PARTYID
+</db:sql>
+						<db:input-parameters><![CDATA[#[{'PARTYID': payload.PARTY_SITE_ID}]]]></db:input-parameters>
+					</db:select>
+					<ee:transform doc:name="Transform Message" doc:id="abac1958-232c-433b-9da1-4f0ddd86ab4a">
+						<ee:message>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="customeracount_payload"><![CDATA[%dw 2.0
+output application/json
+---
+
+payload map {
+	EntityID: "3",
+	EntityName: "customer-site",
+	Env: "DEV",
+	SourceSystemID: "1",
+	SourceSystem: "Salesforce",
+	TargetSystemID: "2",
+	TargetSystem: "oracle",
+	TargetKeyID: $.PARTY_SITE_ID,
+	TargetKeyNum: $.PARTY_SITE_NUMBER,
+	TargetKeyName: $.PARTY_SITE_NAME,
+	TargetParentEntityKeyID: $.PARTY_ID,
+	TargetParentEntityKeyNum: $.PARTY_NUMBER,
+	TargetActive:$.PARTYSITESTATUS
+}]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+				</batch:step>
+				<batch:step name="Batch_Step1" doc:id="33d48d96-8c8a-4ea0-85e3-7e9234fb36bf" acceptExpression="vars.recordExists == null">
+					<db:insert doc:name="Insert" doc:id="d8778bfb-74c3-4843-8736-5c5b09a64e78" config-ref="Database_Config">
+						<db:sql>INSERT INTO SYSTEM_KEY_MAP (EntityID,EntityName,Env,SourceSystemID,SourceSystem,TargetSystemID,TargetSystem,TargetKeyID,
+	TargetKeyNum,TargetKeyName,TargetParentEntityKeyID,TargetParentEntityKeyNum, MapStatus,Verified,TargetActive) VALUES(:EntityID,:EntityName,:Env,:SourceSystemID,:SourceSystem,:TargetSystemID,:TargetSystem,:TargetKeyID,:TargetKeyNum,:TargetKeyName, :TargetParentEntityKeyID, :TargetParentEntityKeyNum :MapStatus,:Verified,:TargetActive)</db:sql>
+						<db:input-parameters><![CDATA[#[{'EntityID':payload.EntityID,'EntityName':payload.EntityName,'Env':payload.Env,'SourceSystemID':payload.SourceSystemID,'SourceSystem':payload.SourceSystem,'TargetSystemID':payload.TargetSystemID,'TargetSystem':payload.TargetSystem,'TargetKeyID':payload.TargetKeyID,'TargetKeyNum':payload.TargetKeyNum,'TargetKeyName':payload.TargetKeyName,'TargetParentEntityKeyID':payload.TargetParentEntityKeyID,'TargetParentEntityKeyNum':payload.TargetParentEntityKeyNum,'MapStatus':payload.MapStatus,'Verified':payload.Verified,}]]]></db:input-parameters>
+					</db:insert>
+				</batch:step>
+				<batch:step name="Batch_Step2" doc:id="01ba7fe7-f2f1-41b6-8cbe-ad19cc4924da" acceptExpression="vars.recordExists != null">
+					<db:update doc:name="Update" doc:id="94e5422d-819d-4a77-8e8d-30620c0a6b01" config-ref="Database_Config">
+						<db:sql>UPDATE SYSTEM_KEY_MAP SET TargetKeyName= :TargetKeyName, MapStatus = :MapStatus WHERE TargetKeyID = :TargetID</db:sql>
+						<db:input-parameters><![CDATA[#['TargetID':payload.PARTY_ID]]]></db:input-parameters>
+					</db:update>
+					<logger level="INFO" doc:name="Logger" doc:id="6a2b720a-2835-49ca-92c1-496b28c69cc3" message="#[payload]" />
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete>
+				<logger level="INFO" doc:name="Logger" doc:id="3ab2ccd3-aced-40ba-a495-e298112ee901" message="#[payload]" />
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+	
+</mule>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd">
+	<flow name="customerAccountBIreport" doc:id="7d605176-c9e8-4242-a7e9-959c0e4a1c13" >
+		<wsc:consume doc:name="Consume" doc:id="1dd2b7e5-7517-4e0e-9b71-feee75ecc6d2" operation="runReport" config-ref="Web_Service_Consumer_Config"/>
+	</flow>
+	<sub-flow name="SOAPWEBSERVICEREQUEST" doc:id="9f8691a3-9da8-44b9-a834-2b95880aed05" >
+		<ee:transform doc:name="Transform Message" doc:id="36e73bfb-e8ec-425f-9461-8e0d04d1b401">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://xmlns.oracle.com/oxp/service/PublicReportService
+---
+{
+	ns0#runReport: {
+		ns0#reportRequest: {
+			ns0#flattenXML: "True",
+			ns0#parameterNameValues: {
+				ns0#item: {
+					ns0#name: "UpdateDate",
+					ns0#values: {
+						ns0#item: "01-01-2017"
+					}
+				}
+			},
+			ns0#reportAbsolutePath: vars.reportAbsolutePath,
+			ns0#sizeOfDataChunkDownload: "-1"
+		},
+		ns0#userID: "ramartin",
+		ns0#password: "TestRM2019"
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<flow name="convertBase64toXMLobject" doc:id="b17c41dd-0819-44c7-af71-b8c5abb1e7dd" >
+		<ee:transform doc:name="Transform Message" doc:id="130362cd-2c5e-4965-85ac-e35e78afd5d1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output application/java
+ns ns0 http://xmlns.oracle.com/oxp/service/PublicReportService
+---
+fromBase64(payload.body.ns0#runReportResponse.ns0#runReportReturn.ns0#reportBytes)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="2a5a92b7-e05e-4abe-bdff-2360050349d4" message="responces from BI report==#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="e49ad71f-3b05-41a9-884a-8af56bca02a0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+read(payload,"application/xml")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="8843a2c4-d53e-4971-a24a-1c67047d4f2c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.ROWSET.*ROW map {
+	($)
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="accountalignmentintegration-oracleFlow" doc:id="826d5015-e3a0-4cc0-9fd4-a3e36fbbbe43">
+		<set-variable value='#["/Custom/Integration/Customers/PartyCustomerAccounts.xdo"]' doc:name="Set Report Absolute Path Variable" doc:id="2724939e-e5c4-4b49-aa7e-977587ebc7a1" variableName="reportAbsolutePath" />
+		<flow-ref doc:name="setSOAPRequestCust" doc:id="cf19e663-a59e-4fc5-b8c2-e1b7c99a9258" name="SOAPWEBSERVICEREQUEST" />
+		<flow-ref doc:name="convertBase64toXMLObject" doc:id="71834eac-1a92-45fa-9424-df3ff15dcaf2" name="customerAccountBIreport" />
+		<flow-ref doc:name="Flow Reference" doc:id="1aa9c314-49a2-4f54-bd05-48d3cc488e25" name="convertBase64toXMLobject" />
+		<logger level="INFO" doc:name="Logger" doc:id="8a519cbf-bc11-4267-9050-d44897eb820d" message="Response from WSDL : #[payload]" />
+		<ee:transform doc:name="Transform Message" doc:id="ce6b2fab-8660-445b-b0d3-4898f1a82006">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="custmeracc_payload"><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+</flow>
+
+</mule>
